@@ -13,9 +13,9 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#212121] text-[#ececec]">
+    <div className="flex h-screen overflow-hidden bg-white text-[#0d0d0d]">
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden bg-white">
         <ChatArea />
       </main>
 

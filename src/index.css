@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Oxygen, Ubuntu,
-    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica,
+    Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,151 +18,103 @@
 body {
   margin: 0;
   padding: 0;
-  background: #212121;
-  color: #ececec;
+  background: #ffffff;
+  color: #0d0d0d;
   overflow: hidden;
 }
 
-/* Scrollbar styling */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
-  border-radius: 3px;
+  background: #d1d1d1;
+  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #606060;
+  background: #b0b0b0;
 }
 
 /* Prose / markdown */
 .prose {
-  color: #ececec;
+  color: #0d0d0d;
   max-width: none;
 }
-
 .prose h1, .prose h2, .prose h3, .prose h4 {
-  color: #ececec;
+  color: #0d0d0d;
   margin-top: 1.25em;
   margin-bottom: 0.5em;
 }
-
 .prose p {
   margin: 0.5em 0;
-  line-height: 1.7;
+  line-height: 1.75;
 }
-
 .prose ul, .prose ol {
   padding-left: 1.5em;
   margin: 0.5em 0;
 }
-
 .prose li {
   margin: 0.25em 0;
 }
-
 .prose code {
-  background: #374151;
-  color: #e5e7eb;
+  background: #f3f4f6;
+  color: #111827;
   padding: 0.15em 0.35em;
   border-radius: 4px;
   font-size: 0.875em;
   font-family: "SF Mono", "Fira Code", "Monaco", "Consolas", monospace;
 }
-
 .prose pre {
   background: #1e1e2e !important;
   border-radius: 8px;
   margin: 0.75em 0;
   overflow: hidden;
 }
-
 .prose pre code {
   background: none;
   padding: 0;
   font-size: 0.85em;
   line-height: 1.6;
+  color: #ececec;
 }
-
 .prose blockquote {
-  border-left: 3px solid #4a4a4a;
+  border-left: 3px solid #d1d1d1;
   padding-left: 1em;
-  color: #8e8ea0;
+  color: #6b7280;
   font-style: italic;
   margin: 0.5em 0;
 }
-
 .prose a {
-  color: #10a37f;
+  color: #0d6efd;
   text-decoration: underline;
 }
-
 .prose table {
   border-collapse: collapse;
   width: 100%;
   margin: 0.75em 0;
 }
-
 .prose th, .prose td {
-  border: 1px solid #3f3f3f;
+  border: 1px solid #e5e7eb;
   padding: 0.5em 0.75em;
   text-align: left;
 }
-
 .prose th {
-  background: #2f2f2f;
+  background: #f9fafb;
   font-weight: 600;
 }
-
 .prose hr {
-  border-color: #3f3f3f;
+  border-color: #e5e7eb;
   margin: 1em 0;
-}
-
-/* Code block header */
-.code-block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: #2d2d3d;
-  border-radius: 8px 8px 0 0;
-  font-size: 0.75rem;
-  color: #8e8ea0;
-  font-family: "SF Mono", "Fira Code", monospace;
-}
-
-/* Textarea auto-resize */
-textarea {
-  resize: none;
-  field-sizing: content;
-}
-
-/* Smooth transitions */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-/* Focus ring */
-.focus-ring:focus {
-  outline: 2px solid #10a37f;
-  outline-offset: 2px;
 }
 
 /* Conversation item hover actions */
 .conv-item:hover .conv-actions {
   opacity: 1;
 }
-
 .conv-actions {
   opacity: 0;
   transition: opacity 150ms;
@@ -173,14 +125,13 @@ textarea {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
-
 .streaming-cursor::after {
   content: "▋";
   animation: blink 1s infinite;
-  color: #10a37f;
+  color: #0d0d0d;
 }
 
-/* hljs overrides */
+/* hljs */
 .hljs {
   background: #1e1e2e !important;
   padding: 1rem !important;

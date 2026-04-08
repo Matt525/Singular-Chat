@@ -22,16 +22,14 @@ export function ChatArea() {
   }
 
   const handleSend = async (content: string) => {
-    if (!currentConversationId) {
-      await createNewChat();
-    }
+    if (!currentConversationId) await createNewChat();
     sendMessage(content);
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-center py-2 border-b border-[#2a2a2a] shrink-0">
+    <div className="flex flex-col h-full bg-white">
+      {/* Header — matches ChatGPT's top bar */}
+      <div className="flex items-center justify-center py-2.5 border-b border-[#e5e5e5] shrink-0 relative">
         <ModelSelector />
       </div>
 
@@ -42,7 +40,7 @@ export function ChatArea() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-2 h-2 rounded-full bg-[#8e8ea0] animate-bounce"
+                className="w-2 h-2 rounded-full bg-[#d1d1d1] animate-bounce"
                 style={{ animationDelay: `${i * 0.15}s` }}
               />
             ))}
@@ -53,7 +51,9 @@ export function ChatArea() {
       )}
 
       {/* Input */}
-      <MessageInput onSend={handleSend} disabled={false} />
+      <div className="w-full max-w-3xl mx-auto px-4 pb-4 pt-2">
+        <MessageInput onSend={handleSend} />
+      </div>
     </div>
   );
 }

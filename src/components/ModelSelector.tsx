@@ -4,11 +4,7 @@ import { useAppStore } from "../stores/appStore";
 import type { ModelOption } from "../types";
 import { PROVIDER_LABELS } from "../types";
 
-interface Props {
-  compact?: boolean;
-}
-
-export function ModelSelector({ compact = false }: Props) {
+export function ModelSelector() {
   const { selectedModel, selectedProvider, setSelectedModel, allModels, ollamaOnline } =
     useAppStore();
   const [open, setOpen] = useState(false);
@@ -37,22 +33,23 @@ export function ModelSelector({ compact = false }: Props) {
   return (
     <div className="relative" ref={ref}>
       <button
-        className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-[#ececec] hover:bg-[#2f2f2f] transition-colors ${
-          compact ? "text-xs" : ""
-        }`}
+        className="flex items-center gap-1 text-[#0d0d0d] font-semibold text-base hover:bg-[#f0f0f0] px-2 py-1 rounded-lg transition-colors"
         onClick={() => setOpen(!open)}
       >
-        <span>{selectedLabel}</span>
-        <ChevronDown size={14} className={`text-[#8e8ea0] transition-transform ${open ? "rotate-180" : ""}`} />
+        <span>Singular Chat</span>
+        <ChevronDown
+          size={16}
+          className={`text-[#6b6b6b] transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-[#2f2f2f] border border-[#3f3f3f] rounded-xl shadow-2xl w-64 py-2 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white border border-[#e5e5e5] rounded-xl shadow-xl w-64 py-2 max-h-96 overflow-y-auto">
           {models.length === 0 && (
-            <div className="px-4 py-6 text-center text-[#8e8ea0] text-sm">
-              <Cpu size={20} className="mx-auto mb-2 opacity-50" />
-              <p>No models available</p>
-              <p className="text-xs mt-1">
+            <div className="px-4 py-6 text-center text-[#6b6b6b] text-sm">
+              <Cpu size={20} className="mx-auto mb-2 opacity-40" />
+              <p className="font-medium text-[#0d0d0d]">No models available</p>
+              <p className="text-xs mt-1 text-[#9b9b9b]">
                 {!ollamaOnline
                   ? "Install Ollama or add API keys in Settings"
                   : "Download a model in Settings → Local Models"}
@@ -67,31 +64,31 @@ export function ModelSelector({ compact = false }: Props) {
               <div key={provider}>
                 <div className="flex items-center gap-2 px-3 py-1.5">
                   {provider === "ollama" ? (
-                    <Cpu size={11} className="text-[#8e8ea0]" />
+                    <Cpu size={11} className="text-[#9b9b9b]" />
                   ) : (
-                    <Globe size={11} className="text-[#8e8ea0]" />
+                    <Globe size={11} className="text-[#9b9b9b]" />
                   )}
-                  <span className="text-[10px] font-semibold text-[#8e8ea0] uppercase tracking-wider">
+                  <span className="text-[10px] font-semibold text-[#9b9b9b] uppercase tracking-wider">
                     {PROVIDER_LABELS[provider]}
                   </span>
                 </div>
                 {items.map((model) => (
                   <button
                     key={model.id}
-                    className="flex items-center justify-between w-full px-3 py-2 text-sm text-[#ececec] hover:bg-[#3a3a3a] transition-colors"
+                    className="flex items-center justify-between w-full px-3 py-2 text-sm text-[#0d0d0d] hover:bg-[#f5f5f5] transition-colors"
                     onClick={() => {
                       setSelectedModel(model.id, model.provider);
                       setOpen(false);
                     }}
                   >
                     <div className="flex flex-col items-start">
-                      <span>{model.name}</span>
+                      <span className="font-medium">{model.name}</span>
                       {model.description && (
-                        <span className="text-xs text-[#8e8ea0]">{model.description}</span>
+                        <span className="text-xs text-[#9b9b9b]">{model.description}</span>
                       )}
                     </div>
                     {model.id === selectedModel && (
-                      <Check size={14} className="text-[#10a37f] shrink-0" />
+                      <Check size={14} className="text-[#0d0d0d] shrink-0" />
                     )}
                   </button>
                 ))}
