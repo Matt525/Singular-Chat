@@ -1,87 +1,88 @@
 # Singular Chat
 
-A privacy-first, open-source desktop chat application — an offline-capable alternative to ChatGPT.
+Singular Chat is a privacy-first desktop chat app for local and cloud models.
+It is built with Tauri 2, React, TypeScript, Tailwind CSS, and SQLite.
 
-Built with **Tauri 2** (Rust backend) + **React + TypeScript + Tailwind CSS** frontend.
+## Dependencies
 
-## Features
+### Required on macOS
 
-- **100% offline capable** — run local LLMs entirely on your machine via [Ollama](https://ollama.com)
-- **Cloud models** — connect OpenAI, Anthropic (Claude), or Groq just by adding your API key
-- **Custom Assistants** — create reusable assistants with names, system prompts, and model preferences (like ChatGPT's GPTs)
-- **ChatGPT-like UI** — familiar sidebar, conversation history grouped by date, streaming responses with Markdown rendering
-- **Local-first storage** — all conversations, settings, and API keys are stored in SQLite on your device
-- **macOS native** — built with Tauri for a fast, native macOS experience
+- Node.js 18 or newer
+- Rust stable
+- Xcode Command Line Tools
 
-## Supported Models
+### Optional
 
-### Local (via Ollama)
-- Llama 3.2, Llama 3.1 (Meta)
-- Gemma 2 (Google)
-- Mistral, Mixtral
-- Phi-3 (Microsoft)
-- Qwen 2.5 (Alibaba)
-- DeepSeek R1
-- Code Llama
-- Any model from [ollama.com/library](https://ollama.com/library)
+- Ollama for local model support
+- API keys for OpenAI, Anthropic, Groq, or xAI if you want cloud models
 
-### Cloud
-- **OpenAI**: GPT-4o, GPT-4o mini, GPT-3.5 Turbo
-- **Anthropic**: Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5
-- **Groq**: Llama 3.3 70B, Mixtral 8x7B, Gemma 2 9B (ultra-fast inference)
+### Project dependencies already included in the repo
 
-## Prerequisites
+- Frontend: `react`, `react-dom`, `vite`, `typescript`, `tailwindcss`, `zustand`
+- Desktop shell: `@tauri-apps/api`, `@tauri-apps/cli`, `@tauri-apps/plugin-shell`
+- Rust backend: `tauri`, `rusqlite`, `tokio`, `reqwest`, `serde`, `serde_json`, `uuid`, `chrono`
 
-- [Node.js](https://nodejs.org) 18+
-- [Rust](https://rustup.rs) (latest stable)
-- [Tauri CLI prerequisites](https://tauri.app/start/prerequisites/) for your OS
-- [Ollama](https://ollama.com) (optional, for local models)
+The repository also commits `package-lock.json` and `src-tauri/Cargo.lock` so installs stay reproducible across machines.
 
-## Development
+## Fastest macOS setup
+
+1. Install the macOS command line tools:
+
+   ```bash
+   xcode-select --install
+   ```
+
+2. Install Node.js 18+ and Rust stable if they are not already installed.
+
+3. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Matt525/Singular-Chat.git
+   cd Singular-Chat
+   ```
+
+4. Install the app dependencies:
+
+   ```bash
+   npm install
+   ```
+
+5. Launch the desktop app:
+
+   ```bash
+   npm run tauri dev
+   ```
+
+`npm run dev` starts the browser-only Vite preview. Use `npm run tauri dev` when you want the actual desktop app with the Rust backend, local storage, and native integrations.
+
+## Build a macOS app
 
 ```bash
-# Install frontend dependencies
-npm install
-
-# Run in development mode (starts Vite + Tauri)
-npm run tauri dev
-```
-
-## Build
-
-```bash
-# Build for production
 npm run tauri build
 ```
 
-The packaged app will be in `src-tauri/target/release/bundle/`.
+The macOS bundle is written under `src-tauri/target/release/bundle/macos/`.
 
-## Setup
+## Local model setup
 
-1. **Local models**: Install [Ollama](https://ollama.com), then download models via **Settings → Local Models**
-2. **Cloud models**: Add your API keys via **Settings → API Keys**
-3. **Custom Assistants**: Click **Explore Assistants** in the sidebar to create custom AI personas
+1. Install Ollama if you want offline model support.
+2. Open Singular Chat and go to the Local Models panel to pull a model.
+3. If you want cloud models, open Settings and add your API keys there.
 
-## Architecture
+## What is inside
 
-```
-├── src/                    # React frontend
-│   ├── components/         # UI components (Sidebar, ChatArea, Modals, etc.)
-│   ├── stores/             # Zustand state management
-│   └── types/              # TypeScript types
-└── src-tauri/              # Rust backend
-    └── src/
-        ├── lib.rs          # Tauri commands (get_conversations, send_message, etc.)
-        ├── db.rs           # SQLite database layer
-        └── models.rs       # AI provider integrations (Ollama, OpenAI, Anthropic, Groq)
-```
+- `src/` - React frontend
+- `src/components/` - Chat UI, settings, model selectors, and modal panels
+- `src/stores/` - Zustand state management
+- `src/types/` - shared TypeScript types
+- `src-tauri/` - Rust backend, database layer, and model integrations
 
 ## Privacy
 
-- API keys are stored locally in SQLite (never sent to any intermediate server)
-- Conversations are stored only on your device
-- When using local models (Ollama), no data leaves your machine
-- When using cloud providers, data goes directly from your device to the provider's API
+- Conversations are stored locally on your machine.
+- API keys are stored locally in SQLite.
+- Ollama traffic stays on your device.
+- Cloud model requests are sent directly from your machine to the provider.
 
 ## License
 

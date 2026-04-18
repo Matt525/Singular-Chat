@@ -1,43 +1,61 @@
-import { listen } from "@tauri-apps/api/event";
 import {
   CheckCircle2,
-  Download,
   Eye,
   EyeOff,
   Key,
-  Loader2,
-  Server,
+  Moon,
+  Palette,
   Settings,
-  Trash2,
+  Sun,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useAppStore } from "../stores/appStore";
-import type { ModelPullProgress } from "../types";
-import { POPULAR_OLLAMA_MODELS } from "../types";
+import { useShallow } from "zustand/react/shallow";
 
-type Tab = "general" | "api-keys" | "local-models";
+type Tab = "general" | "api-keys";
+
+const THEME_OPTIONS = [
+  { id: "dark", label: "Dark", icon: <Moon size={14} /> },
+  { id: "light", label: "Light", icon: <Sun size={14} /> },
+  { id: "midnight", label: "Midnight", icon: <Palette size={14} /> },
+] as const;
 
 function ApiKeyInput({
-  label, value, onChange, placeholder,
+  label,
+  value,
+  onChange,
+  placeholder,
 }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   const [show, setShow] = useState(false);
+  const inputId = useId();
+
   return (
     <div>
-      <label className="block text-sm text-[#6b6b6b] mb-1.5">{label}</label>
-      <div className="flex items-center gap-2 bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 focus-within:border-[#b0b0b0]">
+      <label htmlFor={inputId} className="block text-sm ui-text-secondary mb-1.5">
+        {label}
+      </label>
+      <div className="flex items-center gap-2 ui-bg-elevated border ui-border rounded-xl px-3 py-2.5">
         <input
+          id={inputId}
           type={show ? "text" : "password"}
-          className="flex-1 bg-transparent text-[#0d0d0d] text-sm outline-none placeholder-[#b0b0b0]"
+          className="flex-1 bg-transparent ui-text-primary text-sm outline-none ui-input"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? "sk-…"}
+          placeholder={placeholder ?? "sk-..."}
           autoComplete="off"
           spellCheck={false}
         />
-        <button className="text-[#9b9b9b] hover:text-[#0d0d0d] transition-colors" onClick={() => setShow(!show)}>
+        <button
+          type="button"
+          className="ui-text-muted ui-hover-text transition-colors"
+          onClick={() => setShow((s) => !s)}
+        >
           {show ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       </div>
@@ -46,22 +64,142 @@ function ApiKeyInput({
 }
 
 function GeneralTab() {
-  const { settings, saveSettings } = useAppStore();
+  const { settings, saveSettings } = useAppStore(
+    useShallow((state) => ({
+      settings: state.settings,
+      saveSettings: state.saveSettings,
+    }))
+  );
+  const [defaultModelDraft, setDefaultModelDraft] = useState(settings.default_model);
+  const skipDefaultModelCommitRef = useRef(false);
+
+  useEffect(() => {
+    setDefaultModelDraft(settings.default_model);
+  }, [settings.default_model]);
+
+  const commitDefaultModel = async () => {
+    const nextValue = defaultModelDraft.trim();
+    if (!nextValue || nextValue === settings.default_model) {
+      setDefaultModelDraft(settings.default_model);
+      return;
+    }
+
+    try {
+      await saveSettings({ default_model: nextValue });
+    } catch (error) {
+      console.error("Failed to save default model:", error);
+      setDefaultModelDraft(settings.default_model);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
-        <h3 className="text-sm font-semibold text-[#0d0d0d] mb-3">Default Model</h3>
+        <h3 className="text-sm font-semibold ui-text-primary mb-3">Color Mode</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {THEME_OPTIONS.map((theme) => {
+            const selected = settings.theme === theme.id;
+            return (
+              <button
+                type="button"
+                key={theme.id}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm border transition-colors ${
+                  selected
+                    ? "ui-bg-input ui-text-primary ui-border-strong"
+                    : "ui-bg-elevated ui-text-secondary ui-border ui-hover-text"
+                }`}
+                onClick={() => void saveSettings({ theme: theme.id }).catch(console.error)}
+              >
+                {theme.icon}
+                {theme.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold ui-text-primary mb-3">Default Model</h3>
         <input
-          className="w-full bg-white border border-[#e5e5e5] rounded-xl px-3 py-2.5 text-sm text-[#0d0d0d] outline-none focus:border-[#b0b0b0]"
-          value={settings.default_model}
-          onChange={(e) => saveSettings({ default_model: e.target.value })}
+          className="w-full ui-bg-elevated border ui-border rounded-xl px-3 py-2.5 text-sm ui-text-primary outline-none ui-input"
+          value={defaultModelDraft}
+          onChange={(e) => setDefaultModelDraft(e.target.value)}
           placeholder="e.g. llama3.2"
+          onBlur={() => {
+            if (skipDefaultModelCommitRef.current) {
+              skipDefaultModelCommitRef.current = false;
+              return;
+            }
+            void commitDefaultModel().catch(console.error);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void commitDefaultModel().catch(console.error);
+            }
+            if (e.key === "Escape") {
+              skipDefaultModelCommitRef.current = true;
+              setDefaultModelDraft(settings.default_model);
+              e.currentTarget.blur();
+            }
+          }}
         />
       </div>
+
       <div>
-        <h3 className="text-sm font-semibold text-[#0d0d0d] mb-3">About</h3>
-        <div className="p-4 bg-[#f9f9f9] rounded-xl border border-[#e5e5e5] text-sm text-[#6b6b6b] space-y-1">
-          <p><span className="text-[#0d0d0d] font-medium">Singular Chat</span> — v0.1.0</p>
+        <h3 className="text-sm font-semibold ui-text-primary mb-2">Model Picker</h3>
+        <p className="text-xs ui-text-muted mb-3">
+          Clean mode is the default and hides advanced endpoint variants. Turn this on to show the full
+          long model list.
+        </p>
+        <button
+          type="button"
+          className="flex items-center justify-between w-full ui-bg-elevated border ui-border rounded-xl px-3 py-2.5 text-sm transition-colors"
+          onClick={() =>
+            void saveSettings({ show_full_model_picker: !settings.show_full_model_picker }).catch(
+              console.error
+            )
+          }
+        >
+          <span className="ui-text-primary">
+            {settings.show_full_model_picker ? "Full list enabled" : "Clean list enabled"}
+          </span>
+          <span className="ui-text-secondary">
+            {settings.show_full_model_picker ? "Switch to clean" : "Switch to full"}
+          </span>
+        </button>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold ui-text-primary mb-2">Web Tool</h3>
+        <p className="text-xs ui-text-muted mb-3">
+          Enable automatic web search tool calls for supported models/endpoints. Default is on.
+        </p>
+        <button
+          type="button"
+          className="flex items-center justify-between w-full ui-bg-elevated border ui-border rounded-xl px-3 py-2.5 text-sm transition-colors"
+          onClick={() =>
+            void saveSettings({ web_search_enabled: !settings.web_search_enabled }).catch(
+              console.error
+            )
+          }
+        >
+          <span className="ui-text-primary">
+            {settings.web_search_enabled ? "Web search enabled" : "Web search disabled"}
+          </span>
+          <span className="ui-text-secondary">
+            {settings.web_search_enabled ? "Turn off" : "Turn on"}
+          </span>
+        </button>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold ui-text-primary mb-3">About</h3>
+        <div className="p-4 ui-bg-elevated rounded-xl border ui-border text-sm ui-text-secondary space-y-1">
+          <p>
+            <span className="ui-text-primary font-medium">Singular Chat</span> -
+            v0.1.0
+          </p>
           <p>Open-source, privacy-first desktop chat</p>
           <p>All data stored locally on your device</p>
         </div>
@@ -71,26 +209,92 @@ function GeneralTab() {
 }
 
 function ApiKeysTab() {
-  const { settings, saveSettings } = useAppStore();
+  const { settings, saveSettings } = useAppStore(
+    useShallow((state) => ({
+      settings: state.settings,
+      saveSettings: state.saveSettings,
+    }))
+  );
   const [local, setLocal] = useState({ ...settings });
   const [saved, setSaved] = useState(false);
+  const savedTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setLocal({ ...settings });
+  }, [
+    settings.openai_api_key,
+    settings.anthropic_api_key,
+    settings.groq_api_key,
+    settings.xai_api_key,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimeoutRef.current !== null) {
+        window.clearTimeout(savedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSave = async () => {
-    await saveSettings(local);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await saveSettings(local);
+      setSaved(true);
+      if (savedTimeoutRef.current !== null) {
+        window.clearTimeout(savedTimeoutRef.current);
+      }
+      savedTimeoutRef.current = window.setTimeout(() => {
+        setSaved(false);
+        savedTimeoutRef.current = null;
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to save API keys:", error);
+    }
   };
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-[#6b6b6b]">
-        API keys are stored locally on your device and sent only to the respective AI provider.
+      <p className="text-sm ui-text-secondary">
+        API keys are stored locally on your device and sent only to the
+        respective AI provider.
       </p>
-      <ApiKeyInput label="OpenAI API Key" value={local.openai_api_key} onChange={(v) => setLocal((s) => ({ ...s, openai_api_key: v }))} placeholder="sk-…" />
-      <ApiKeyInput label="Anthropic API Key" value={local.anthropic_api_key} onChange={(v) => setLocal((s) => ({ ...s, anthropic_api_key: v }))} placeholder="sk-ant-…" />
-      <ApiKeyInput label="Groq API Key" value={local.groq_api_key} onChange={(v) => setLocal((s) => ({ ...s, groq_api_key: v }))} placeholder="gsk_…" />
+      <ApiKeyInput
+        label="OpenAI API Key"
+        value={local.openai_api_key}
+        onChange={(v) => setLocal((s) => ({ ...s, openai_api_key: v }))}
+        placeholder="sk-..."
+      />
+      <ApiKeyInput
+        label="Anthropic API Key"
+        value={local.anthropic_api_key}
+        onChange={(v) => setLocal((s) => ({ ...s, anthropic_api_key: v }))}
+        placeholder="sk-ant-..."
+      />
+      <ApiKeyInput
+        label="Groq API Key"
+        value={local.groq_api_key}
+        onChange={(v) => setLocal((s) => ({ ...s, groq_api_key: v }))}
+        placeholder="gsk_..."
+      />
+      <ApiKeyInput
+        label="xAI (Grok) API Key"
+        value={local.xai_api_key}
+        onChange={(v) => setLocal((s) => ({ ...s, xai_api_key: v }))}
+        placeholder="xai-..."
+      />
       <button
-        className="flex items-center gap-2 px-4 py-2 bg-[#0d0d0d] hover:bg-[#2d2d2d] text-white rounded-xl text-sm font-medium transition-colors"
+        type="button"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+        style={{
+          background: "var(--accent)",
+          color: "var(--text-on-accent)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "var(--accent-hover)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "var(--accent)";
+        }}
         onClick={handleSave}
       >
         {saved ? <CheckCircle2 size={15} /> : null}
@@ -100,198 +304,71 @@ function ApiKeysTab() {
   );
 }
 
-function LocalModelsTab() {
-  const { settings, saveSettings, ollamaModels, ollamaOnline, refreshOllamaModels, pullOllamaModel, deleteOllamaModel } = useAppStore();
-  const [ollamaUrl, setOllamaUrl] = useState(settings.ollama_url);
-  const [urlSaved, setUrlSaved] = useState(false);
-  const [pulling, setPulling] = useState<string | null>(null);
-  const [pullProgress, setPullProgress] = useState<{ status: string; completed?: number; total?: number } | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [customModel, setCustomModel] = useState("");
-  const unlistenRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    listen<ModelPullProgress>("model-pull-progress", (e) => {
-      setPullProgress({ status: e.payload.status, completed: e.payload.completed, total: e.payload.total });
-    }).then((fn) => { unlistenRef.current = fn; });
-    return () => { unlistenRef.current?.(); };
-  }, []);
-
-  const handlePull = async (name: string) => {
-    setPulling(name);
-    setPullProgress(null);
-    try { await pullOllamaModel(name); } catch (e) { console.error(e); }
-    finally { setPulling(null); setPullProgress(null); }
-  };
-
-  const handleDelete = async (name: string) => {
-    setDeleting(name);
-    try { await deleteOllamaModel(name); } finally { setDeleting(null); }
-  };
-
-  const downloadedNames = new Set(ollamaModels.map((m) => m.name));
-  const progressPercent = pullProgress?.total && pullProgress.completed
-    ? Math.round((pullProgress.completed / pullProgress.total) * 100) : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Ollama status */}
-      <div>
-        <h3 className="text-sm font-semibold text-[#0d0d0d] mb-1">Ollama Server</h3>
-        <p className="text-xs text-[#9b9b9b] mb-3">
-          Ollama runs models locally.{" "}
-          <a href="https://ollama.com" className="text-[#0d6efd] hover:underline" target="_blank" rel="noopener noreferrer">Install Ollama →</a>
-        </p>
-        <div className="flex items-center gap-2 mb-3">
-          <div className={`w-2 h-2 rounded-full ${ollamaOnline ? "bg-green-500" : "bg-red-400"}`} />
-          <span className="text-sm text-[#6b6b6b]">{ollamaOnline ? "Connected" : "Not running"}</span>
-          <button className="ml-auto text-xs text-[#0d6efd] hover:underline" onClick={refreshOllamaModels}>Refresh</button>
-        </div>
-        <div className="flex gap-2">
-          <input className="flex-1 bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-sm text-[#0d0d0d] outline-none focus:border-[#b0b0b0]"
-            value={ollamaUrl} onChange={(e) => setOllamaUrl(e.target.value)} placeholder="http://localhost:11434" />
-          <button className="px-3 py-2 bg-[#f4f4f4] hover:bg-[#ebebeb] border border-[#e5e5e5] rounded-xl text-sm text-[#0d0d0d] transition-colors"
-            onClick={async () => { await saveSettings({ ollama_url: ollamaUrl }); setUrlSaved(true); setTimeout(() => setUrlSaved(false), 2000); }}>
-            {urlSaved ? <CheckCircle2 size={14} className="text-green-500" /> : "Save"}
-          </button>
-        </div>
-      </div>
-
-      {/* Downloaded models */}
-      {ollamaModels.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-[#0d0d0d] mb-3">Downloaded ({ollamaModels.length})</h3>
-          <div className="space-y-2">
-            {ollamaModels.map((m) => (
-              <div key={m.name} className="flex items-center justify-between p-3 bg-[#f9f9f9] rounded-xl border border-[#e5e5e5]">
-                <div>
-                  <p className="text-sm font-medium text-[#0d0d0d]">{m.name}</p>
-                  <p className="text-xs text-[#9b9b9b]">{(m.size / 1e9).toFixed(1)} GB</p>
-                </div>
-                <button className="p-1.5 text-[#9b9b9b] hover:text-red-500 transition-colors" onClick={() => handleDelete(m.name)} disabled={deleting === m.name}>
-                  {deleting === m.name ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pull progress */}
-      {pulling && pullProgress && (
-        <div className="p-3 bg-[#f9f9f9] rounded-xl border border-[#e5e5e5]">
-          <div className="flex items-center gap-2 mb-2">
-            <Loader2 size={14} className="animate-spin text-[#0d0d0d]" />
-            <span className="text-sm text-[#0d0d0d]">Downloading {pulling}…</span>
-          </div>
-          <p className="text-xs text-[#9b9b9b] mb-1">{pullProgress.status}</p>
-          {progressPercent !== null && (
-            <div className="w-full bg-[#e5e5e5] rounded-full h-1.5">
-              <div className="bg-[#0d0d0d] h-1.5 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Custom pull */}
-      <div>
-        <h3 className="text-sm font-semibold text-[#0d0d0d] mb-1">Download a Model</h3>
-        <p className="text-xs text-[#9b9b9b] mb-3">
-          Any model from <a href="https://ollama.com/library" className="text-[#0d6efd] hover:underline" target="_blank" rel="noopener noreferrer">ollama.com/library</a>
-        </p>
-        <div className="flex gap-2 mb-4">
-          <input
-            className="flex-1 bg-white border border-[#e5e5e5] rounded-xl px-3 py-2 text-sm text-[#0d0d0d] outline-none focus:border-[#b0b0b0] placeholder-[#b0b0b0]"
-            placeholder="e.g. llama3.2, gemma2:9b"
-            value={customModel}
-            onChange={(e) => setCustomModel(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && customModel.trim()) handlePull(customModel.trim()); }}
-          />
-          <button
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#0d0d0d] hover:bg-[#2d2d2d] text-white rounded-xl text-sm transition-colors disabled:opacity-40"
-            disabled={!customModel.trim() || !!pulling}
-            onClick={() => handlePull(customModel.trim())}
-          >
-            <Download size={14} /> Pull
-          </button>
-        </div>
-
-        {/* Popular models */}
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-          {POPULAR_OLLAMA_MODELS.map((m) => {
-            const downloaded = downloadedNames.has(m.name);
-            const isPulling = pulling === m.name;
-            return (
-              <div key={m.name} className="flex items-center justify-between p-3 bg-white hover:bg-[#f9f9f9] rounded-xl border border-[#e5e5e5] transition-colors">
-                <div>
-                  <p className="text-sm font-medium text-[#0d0d0d]">{m.name}</p>
-                  <p className="text-xs text-[#9b9b9b]">{m.description} · {m.size}</p>
-                </div>
-                <button
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    downloaded ? "bg-[#f4f4f4] text-[#9b9b9b] cursor-default"
-                    : isPulling ? "bg-[#f4f4f4] text-[#0d0d0d] cursor-default"
-                    : "bg-[#0d0d0d] text-white hover:bg-[#2d2d2d]"
-                  }`}
-                  disabled={downloaded || isPulling || !!pulling}
-                  onClick={() => handlePull(m.name)}
-                >
-                  {downloaded ? <><CheckCircle2 size={12} /> Downloaded</>
-                  : isPulling ? <><Loader2 size={12} className="animate-spin" /> Downloading…</>
-                  : <><Download size={12} /> Download</>}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: "general", label: "General", icon: <Settings size={15} /> },
   { id: "api-keys", label: "API Keys", icon: <Key size={15} /> },
-  { id: "local-models", label: "Local Models", icon: <Server size={15} /> },
 ];
 
 export function SettingsModal() {
-  const { setShowSettings } = useAppStore();
+  const { setShowSettings } = useAppStore(
+    useShallow((state) => ({
+      setShowSettings: state.setShowSettings,
+    }))
+  );
   const [activeTab, setActiveTab] = useState<Tab>("general");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white border border-[#e5e5e5] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-48 bg-[#f9f9f9] border-r border-[#e5e5e5] flex flex-col py-4 shrink-0">
-          <h2 className="text-sm font-semibold text-[#0d0d0d] px-4 mb-4">Settings</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="ui-bg-main border ui-border rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex overflow-hidden">
+        <div className="w-48 ui-bg-sidebar border-r ui-border flex flex-col py-4 shrink-0">
+          <h2 className="text-sm font-semibold ui-text-primary px-4 mb-4">
+            Settings
+          </h2>
           {TABS.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
-                activeTab === tab.id ? "bg-[#ebebeb] text-[#0d0d0d]" : "text-[#6b6b6b] hover:bg-[#f0f0f0] hover:text-[#0d0d0d]"
+                activeTab === tab.id
+                  ? "ui-text-primary"
+                  : "ui-text-secondary ui-hover-text"
               }`}
+              style={{
+                background:
+                  activeTab === tab.id ? "var(--bg-sidebar-active)" : "transparent",
+              }}
               onClick={() => setActiveTab(tab.id)}
             >
-              {tab.icon} {tab.label}
+              {tab.icon}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e5e5] shrink-0">
-            <h3 className="text-sm font-semibold text-[#0d0d0d]">
+          <div className="flex items-center justify-between px-6 py-4 border-b ui-border shrink-0">
+            <h3 className="text-sm font-semibold ui-text-primary">
               {TABS.find((t) => t.id === activeTab)?.label}
             </h3>
-            <button className="p-1.5 text-[#9b9b9b] hover:text-[#0d0d0d] hover:bg-[#f4f4f4] rounded-lg transition-colors" onClick={() => setShowSettings(false)}>
+            <button
+              type="button"
+              className="p-1.5 rounded-lg ui-text-muted ui-hover-text transition-colors"
+              style={{ background: "transparent" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--bg-sidebar-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
+              onClick={() => setShowSettings(false)}
+            >
               <X size={16} />
             </button>
           </div>
+
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === "general" && <GeneralTab />}
             {activeTab === "api-keys" && <ApiKeysTab />}
-            {activeTab === "local-models" && <LocalModelsTab />}
           </div>
         </div>
       </div>

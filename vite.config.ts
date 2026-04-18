@@ -15,7 +15,8 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // Prefer IPv4 loopback locally so both localhost and 127.0.0.1 resolve reliably.
+    host: host || "127.0.0.1",
     hmr: host
       ? {
           protocol: "ws",

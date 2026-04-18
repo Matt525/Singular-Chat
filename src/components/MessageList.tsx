@@ -1,29 +1,79 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore } from "../stores/appStore";
 import { MessageItem } from "./MessageItem";
+import { useShallow } from "zustand/react/shallow";
 
 export function MessageList() {
-  const { currentMessages, isStreaming, streamingConversationId, currentConversationId } =
-    useAppStore();
+  const {
+    currentConversationId,
+    messages,
+    isStreaming,
+    streamingConversationId,
+    streamingContent,
+    currentToolStatus,
+  } = useAppStore(
+    useShallow((state) => ({
+      currentConversationId: state.currentConversationId,
+      messages: state.messages,
+      isStreaming: state.isStreaming,
+      streamingConversationId: state.streamingConversationId,
+      streamingContent: state.streamingContent,
+      currentToolStatus: state.currentConversationId
+        ? state.toolStatusByConversation[state.currentConversationId]
+        : undefined,
+    }))
+  );
+
   const bottomRef = useRef<HTMLDivElement>(null);
-  const messages = currentMessages();
+  const conversationMessages = currentConversationId ? messages[currentConversationId] ?? [] : [];
+  const toolStatus = currentToolStatus;
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, isStreaming]);
-
-  // Also scroll on streaming content changes
-  const { streamingContent } = useAppStore();
-  useEffect(() => {
-    if (isStreaming) {
-      bottomRef.current?.scrollIntoView({ behavior: "instant" });
+  const displayMessages = useMemo(() => {
+    if (!currentConversationId) {
+      return [];
     }
-  }, [streamingContent, isStreaming]);
+
+    if (isStreaming && streamingConversationId === currentConversationId) {
+      return [
+        ...conversationMessages,
+        {
+          id: "__streaming__",
+          conversation_id: currentConversationId,
+          role: "assistant" as const,
+          content: streamingContent,
+          created_at: new Date().toISOString(),
+          used_web: false,
+        },
+      ];
+    }
+
+    return conversationMessages;
+  }, [
+    conversationMessages,
+    currentConversationId,
+    isStreaming,
+    streamingConversationId,
+    streamingContent,
+  ]);
+
+  useEffect(() => {
+    const node = bottomRef.current;
+    if (!node) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      node.scrollIntoView({
+        behavior: isStreaming ? "auto" : "smooth",
+        block: "end",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentConversationId, displayMessages, isStreaming]);
 
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-4">
-        {messages.map((msg) => (
+        {displayMessages.map((msg) => (
           <MessageItem
             key={msg.id}
             message={msg}
@@ -32,6 +82,7 @@ export function MessageList() {
               isStreaming &&
               streamingConversationId === currentConversationId
             }
+            toolStatus={msg.id === "__streaming__" ? toolStatus : undefined}
           />
         ))}
         <div ref={bottomRef} />

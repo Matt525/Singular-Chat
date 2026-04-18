@@ -1,26 +1,48 @@
-import { useEffect } from "react";
-import { AssistantsModal } from "./components/AssistantsModal";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { ChatArea } from "./components/ChatArea";
-import { SettingsModal } from "./components/SettingsModal";
 import { Sidebar } from "./components/Sidebar";
 import { useAppStore } from "./stores/appStore";
+import { useShallow } from "zustand/react/shallow";
+
+const SettingsModal = lazy(() =>
+  import("./components/SettingsModal").then((module) => ({ default: module.SettingsModal }))
+);
+const AssistantsModal = lazy(() =>
+  import("./components/AssistantsModal").then((module) => ({ default: module.AssistantsModal }))
+);
+
+const SUPPORTED_THEMES = new Set(["dark", "light", "midnight"]);
 
 export default function App() {
-  const { init, showSettings, showAssistants } = useAppStore();
+  const { init, showSettings, showAssistants, theme } = useAppStore(
+    useShallow((state) => ({
+      init: state.init,
+      showSettings: state.showSettings,
+      showAssistants: state.showAssistants,
+      theme: state.settings.theme,
+    }))
+  );
 
   useEffect(() => {
-    init().catch(console.error);
-  }, []);
+    void init().catch(console.error);
+  }, [init]);
+
+  useLayoutEffect(() => {
+    const nextTheme = SUPPORTED_THEMES.has(theme) ? theme : "dark";
+    document.documentElement.setAttribute("data-theme", nextTheme);
+  }, [theme]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white text-[#0d0d0d]">
+    <div className="flex h-screen overflow-hidden ui-bg-app ui-text-primary">
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden bg-white">
+      <main className="flex-1 flex flex-col overflow-hidden ui-bg-main">
         <ChatArea />
       </main>
 
-      {showSettings && <SettingsModal />}
-      {showAssistants && <AssistantsModal />}
+      <Suspense fallback={null}>
+        {showSettings && <SettingsModal />}
+        {showAssistants && <AssistantsModal />}
+      </Suspense>
     </div>
   );
 }
